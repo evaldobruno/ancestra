@@ -6,7 +6,6 @@ import { useFamilyData } from "@/lib/useFamilyData";
 import { MemberForm } from "@/components/MemberForm";
 import { SourceBadge, SkeletonGrid } from "@/components/SourceBadge";
 import { fetchMemberById, deleteMember, type EditableMember } from "@/lib/mutations";
-import { statusLabel } from "@/lib/queries";
 
 export default function Members() {
   const { t, locale } = useI18n();
@@ -105,13 +104,6 @@ export default function Members() {
               <dl className="mt-3 space-y-1 text-sm text-stone-500">
                 {m.birthPlace && <div>📍 {m.birthPlace}{m.birthDate ? ` · ${new Date(m.birthDate).getFullYear()}` : ""}</div>}
                 {m.profession && <div>💼 {m.profession}</div>}
-                <div>
-                  <span className={`rounded-full px-2 py-0.5 text-xs ${
-                    m.status === "alive" ? "bg-sage-100 text-sage-700" : "bg-stone-200 text-stone-600"
-                  }`}>
-                    {statusLabel(m.status, m.gender, pt)}
-                  </span>
-                </div>
               </dl>
             </div>
           ))}

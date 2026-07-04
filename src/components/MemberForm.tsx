@@ -9,6 +9,8 @@ import {
   updateMember,
   deleteMember,
   createRelationship,
+  deleteRelationship,
+  fetchRelationshipsFor,
   fetchFamilies,
   fetchMemberOptions,
   fetchMemberParents,
@@ -16,6 +18,7 @@ import {
   type FamilyOption,
   type MemberOption,
   type EditableMember,
+  type MemberRel,
 } from "@/lib/mutations";
 
 const EMPTY = {
@@ -64,6 +67,7 @@ export function MemberForm({
   const [people, setPeople] = useState<MemberOption[]>([]);
   const [form, setForm] = useState<typeof EMPTY>({ ...EMPTY, family_id: defaultFamilyId || "" });
   const [rel, setRel] = useState<typeof NO_REL>({ ...NO_REL });
+  const [memberRels, setMemberRels] = useState<MemberRel[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -94,7 +98,10 @@ export function MemberForm({
         status: editMember.status || "alive",
       });
       setRel({ ...NO_REL });
+      setMemberRels([]);
+      fetchRelationshipsFor(editMember.id).then(setMemberRels);
     } else {
+      setMemberRels([]);
       const r = { ...NO_REL };
       const f = { ...EMPTY, family_id: defaultFamilyId || "" };
       if (linkTo) {
@@ -141,6 +148,23 @@ export function MemberForm({
     await Promise.all(jobs);
   }
 
+  async function removeRel(id: string) {
+    if (!editMember) return;
+    const ok = window.confirm(pt ? "Remover esta ligação?" : "Remove this link?");
+    if (!ok) return;
+    const res = await deleteRelationship(id);
+    if (!res.ok) return setError(res.error || "Erro");
+    setMemberRels((rs) => rs.filter((r) => r.id !== id));
+    onSaved?.();
+  }
+
+  const relLabel = (kind: MemberRel["kind"]) =>
+    kind === "parent" ? (pt ? "Pai/Mãe" : "Parent")
+      : kind === "child" ? (pt ? "Filho(a)" : "Child")
+      : kind === "spouse" ? (pt ? "Cônjuge" : "Spouse")
+      : kind === "divorced" ? (pt ? "Divorciado(a)" : "Divorced")
+      : (pt ? "Ligação" : "Link");
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -149,8 +173,9 @@ export function MemberForm({
     setSaving(true);
     if (isEdit) {
       const res = await updateMember(editMember!.id, form as any);
+      if (!res.ok) { setSaving(false); return setError(res.error || "Erro"); }
+      try { await applyLinks(editMember!.id); } catch { /* links best-effort */ }
       setSaving(false);
-      if (!res.ok) return setError(res.error || "Erro");
       onSaved?.();
       onClose();
       return;
@@ -174,7 +199,7 @@ export function MemberForm({
       <label className="label">{label}</label>
       <select className="input" value={rel[key]} onChange={(e) => setR(key, e.target.value)}>
         <option value="">{pt ? "— ninguém —" : "— none —"}</option>
-        {people.map((p) => (
+        {people.filter((p) => !isEdit || p.id !== editMember!.id).map((p) => (
           <option key={p.id} value={p.id}>{p.name}</option>
         ))}
       </select>
@@ -278,23 +303,39 @@ export function MemberForm({
             )}
           </div>
 
-          {!isEdit && (
-            <>
-              <div className="section-title">🔗 {pt ? "Ligações (opcional)" : "Links (optional)"}</div>
-              <p className="-mt-1 mb-3 text-xs text-stone-400">
-                {pt
-                  ? "Liga já esta pessoa à família — a árvore junta tudo automaticamente."
-                  : "Connect this person to the family — the tree links it automatically."}
-              </p>
-              <div className="form-grid">
-                {relField("father", pt ? "Pai" : "Father")}
-                {relField("mother", pt ? "Mãe" : "Mother")}
-                {relField("spouse", pt ? "Cônjuge / companheiro(a)" : "Spouse / partner")}
-                {relField("parentOf", pt ? "É pai/mãe de" : "Is parent of")}
-                {relField("sibling", pt ? "Irmão/Irmã de" : "Sibling of")}
-              </div>
-            </>
+          <div className="section-title">🔗 {pt ? "Ligações" : "Links"}</div>
+
+          {isEdit && (
+            <div className="mb-3">
+              {memberRels.length === 0 ? (
+                <p className="text-xs text-stone-400">{pt ? "Ainda sem ligações. Adicione abaixo." : "No links yet. Add some below."}</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {memberRels.map((r) => (
+                    <span key={r.id} className="inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-3 py-1 text-sm dark:bg-white/10">
+                      <span className="text-stone-400">{relLabel(r.kind)}:</span>
+                      <span className="font-medium">{r.otherName}</span>
+                      <button type="button" onClick={() => removeRel(r.id)} title={pt ? "Remover" : "Remove"}
+                        className="ml-0.5 text-stone-400 hover:text-red-500">✕</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
+
+          <p className="-mt-1 mb-3 text-xs text-stone-400">
+            {pt
+              ? "Liga esta pessoa à família — a árvore junta tudo automaticamente."
+              : "Connect this person to the family — the tree links it automatically."}
+          </p>
+          <div className="form-grid">
+            {relField("father", pt ? "Pai" : "Father")}
+            {relField("mother", pt ? "Mãe" : "Mother")}
+            {relField("spouse", pt ? "Cônjuge / companheiro(a)" : "Spouse / partner")}
+            {relField("parentOf", pt ? "É pai/mãe de" : "Is parent of")}
+            {relField("sibling", pt ? "Irmão/Irmã de" : "Sibling of")}
+          </div>
 
           {error && (
             <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>

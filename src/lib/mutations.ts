@@ -358,6 +358,50 @@ export async function createMember(input: NewMember): Promise<Result & { id?: st
   return { ok: true, id: data?.id };
 }
 
+export type MemberRel = {
+  id: string;
+  otherId: string;
+  otherName: string;
+  kind: "parent" | "child" | "spouse" | "divorced" | "other";
+};
+
+// Current relationships of a member (to show/edit in the form).
+export async function fetchRelationshipsFor(memberId: string): Promise<MemberRel[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = createClient();
+  const { data: rels } = await supabase
+    .from("family_relationships")
+    .select("id,from_member,to_member,type")
+    .is("deleted_at", null);
+  const mine = (rels ?? []).filter((r: any) => r.from_member === memberId || r.to_member === memberId);
+  const otherIds = [...new Set(mine.map((r: any) => (r.from_member === memberId ? r.to_member : r.from_member)))];
+  const names = new Map<string, string>();
+  if (otherIds.length) {
+    const { data: ms } = await supabase.from("family_members").select("id,full_name,known_as").in("id", otherIds);
+    (ms ?? []).forEach((m: any) => names.set(m.id, m.known_as || m.full_name));
+  }
+  return mine.map((r: any) => {
+    const otherId = r.from_member === memberId ? r.to_member : r.from_member;
+    let kind: MemberRel["kind"] = "other";
+    if (r.type === "child") kind = r.from_member === memberId ? "child" : "parent";
+    else if (r.type === "parent") kind = r.from_member === memberId ? "parent" : "child";
+    else if (r.type === "spouse" || r.type === "partner") kind = "spouse";
+    else if (r.type === "divorced") kind = "divorced";
+    return { id: r.id, otherId, otherName: names.get(otherId) || "—", kind };
+  });
+}
+
+export async function deleteRelationship(id: string): Promise<Result> {
+  if (!isSupabaseConfigured()) return { ok: false, error: "Supabase não configurado." };
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("family_relationships")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { ok: false, error: friendly(error.message) };
+  return { ok: true };
+}
+
 // Parent member ids of a given member (for sibling linking).
 export async function fetchMemberParents(memberId: string): Promise<string[]> {
   if (!isSupabaseConfigured()) return [];
