@@ -3,8 +3,9 @@
 
 [build]
   command = "npm run build"
-  # NÃO definir "publish" — o runtime do Next.js trata disso automaticamente.
-  # (definir publish=".next" à mão causa "Page not found" 404.)
+  # Com a raiz do repositório = raiz da app, o publish tem de ser ".next"
+  # (senão o plugin dá "publish directory cannot be the same as base").
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
