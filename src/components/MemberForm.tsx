@@ -35,7 +35,8 @@ const EMPTY = {
   status: "alive",
 };
 
-const NO_REL = { father: "", mother: "", spouse: "", parentOf: "", sibling: "" };
+const emptyRel = () => ({ father: "", mother: "", spouse: "", parentOf: [] as string[], sibling: [] as string[] });
+type Rel = ReturnType<typeof emptyRel>;
 
 // linkTo lets the tree open this form to add a relative of an existing person.
 export type LinkTo = {
@@ -66,7 +67,7 @@ export function MemberForm({
   const [families, setFamilies] = useState<FamilyOption[]>([]);
   const [people, setPeople] = useState<MemberOption[]>([]);
   const [form, setForm] = useState<typeof EMPTY>({ ...EMPTY, family_id: defaultFamilyId || "" });
-  const [rel, setRel] = useState<typeof NO_REL>({ ...NO_REL });
+  const [rel, setRel] = useState<Rel>(emptyRel());
   const [memberRels, setMemberRels] = useState<MemberRel[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,15 +98,15 @@ export function MemberForm({
         death_date: (editMember as any).death_date || "",
         status: editMember.status || "alive",
       });
-      setRel({ ...NO_REL });
+      setRel(emptyRel());
       setMemberRels([]);
       fetchRelationshipsFor(editMember.id).then(setMemberRels);
     } else {
       setMemberRels([]);
-      const r = { ...NO_REL };
+      const r = emptyRel();
       const f = { ...EMPTY, family_id: defaultFamilyId || "" };
       if (linkTo) {
-        if (linkTo.relation === "parentOf") { r.parentOf = linkTo.memberId; if (linkTo.gender) f.gender = linkTo.gender; }
+        if (linkTo.relation === "parentOf") { r.parentOf = [linkTo.memberId]; if (linkTo.gender) f.gender = linkTo.gender; }
         else if (linkTo.relation === "spouseOf") r.spouse = linkTo.memberId;
         else if (linkTo.relation === "childOf") {
           if (linkTo.gender === "female") r.mother = linkTo.memberId; else r.father = linkTo.memberId;
@@ -117,7 +118,7 @@ export function MemberForm({
   }, [open, defaultFamilyId, editMember, linkTo]);
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
-  const setR = (k: string, v: string) => setRel((r) => ({ ...r, [k]: v }));
+  const setR = (k: "father" | "mother" | "spouse", v: string) => setRel((r) => ({ ...r, [k]: v }));
 
   async function remove() {
     if (!editMember) return;
@@ -140,9 +141,10 @@ export function MemberForm({
     if (rel.father) jobs.push(createRelationship({ from_member: rel.father, to_member: newId, type: "child" }));
     if (rel.mother) jobs.push(createRelationship({ from_member: rel.mother, to_member: newId, type: "child" }));
     if (rel.spouse) jobs.push(createRelationship({ from_member: newId, to_member: rel.spouse, type: "spouse" }));
-    if (rel.parentOf) jobs.push(createRelationship({ from_member: newId, to_member: rel.parentOf, type: "child" }));
-    if (rel.sibling) {
-      const parents = await fetchMemberParents(rel.sibling);
+    rel.parentOf.filter(Boolean).forEach((id) =>
+      jobs.push(createRelationship({ from_member: newId, to_member: id, type: "child" })));
+    for (const sib of rel.sibling.filter(Boolean)) {
+      const parents = await fetchMemberParents(sib);
       parents.forEach((p) => jobs.push(createRelationship({ from_member: p, to_member: newId, type: "child" })));
     }
     await Promise.all(jobs);
@@ -190,21 +192,66 @@ export function MemberForm({
 
   function addAnother() {
     setForm((f) => ({ ...f, full_name: "", known_as: "", gender: "", birth_date: "", birth_place: "", profession: "", avatar_url: "" }));
-    setRel({ ...NO_REL });
+    setRel(emptyRel());
     setDone(false);
   }
 
-  const relField = (key: keyof typeof NO_REL, label: string) => (
+  const options = people.filter((p) => !isEdit || p.id !== editMember!.id);
+
+  const relField = (key: "father" | "mother" | "spouse", label: string) => (
     <div className="field">
       <label className="label">{label}</label>
       <select className="input" value={rel[key]} onChange={(e) => setR(key, e.target.value)}>
         <option value="">{pt ? "— ninguém —" : "— none —"}</option>
-        {people.filter((p) => !isEdit || p.id !== editMember!.id).map((p) => (
+        {options.map((p) => (
           <option key={p.id} value={p.id}>{p.name}</option>
         ))}
       </select>
     </div>
   );
+
+  // Multi picker: pick several people (children / siblings). Each chosen person
+  // is a row; the trailing empty row adds another; clearing a row removes it.
+  const multiRelField = (key: "parentOf" | "sibling", label: string) => {
+    const vals = rel[key];
+    const rows = [...vals, ""];
+    return (
+      <div className="field sm:col-span-2">
+        <label className="label">{label}</label>
+        <div className="space-y-2">
+          {rows.map((val, i) => {
+            const isExisting = i < vals.length;
+            return (
+              <select
+                key={i}
+                className="input"
+                value={val}
+                onChange={(e) => {
+                  const next = vals.filter(Boolean);
+                  const v = e.target.value;
+                  if (isExisting) {
+                    if (v) next[i] = v; else next.splice(i, 1);
+                  } else if (v) {
+                    next.push(v);
+                  }
+                  setRel((r) => ({ ...r, [key]: next }));
+                }}
+              >
+                <option value="">
+                  {isExisting ? (pt ? "— remover —" : "— remove —") : (pt ? "＋ adicionar…" : "＋ add…")}
+                </option>
+                {options
+                  .filter((p) => p.id === val || !vals.includes(p.id))
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+              </select>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <Modal
@@ -333,8 +380,8 @@ export function MemberForm({
             {relField("father", pt ? "Pai" : "Father")}
             {relField("mother", pt ? "Mãe" : "Mother")}
             {relField("spouse", pt ? "Cônjuge / companheiro(a)" : "Spouse / partner")}
-            {relField("parentOf", pt ? "É pai/mãe de" : "Is parent of")}
-            {relField("sibling", pt ? "Irmão/Irmã de" : "Sibling of")}
+            {multiRelField("parentOf", pt ? "Filhos(as) — pode adicionar vários" : "Children — add several")}
+            {multiRelField("sibling", pt ? "Irmãos/Irmãs — pode adicionar vários" : "Siblings — add several")}
           </div>
 
           {error && (
