@@ -591,7 +591,7 @@ export async function createMemory(input: NewMemory): Promise<Result> {
   if (!me?.family_id)
     return { ok: false, error: "Ainda não tens família atribuída. Pede a um administrador." };
 
-  const { error } = await supabase.from("memories").insert({
+  const { data: mem, error } = await supabase.from("memories").insert({
     family_id: me.family_id,
     title: input.title.trim(),
     story: input.story?.trim() || null,
@@ -600,8 +600,19 @@ export async function createMemory(input: NewMemory): Promise<Result> {
     location: input.location?.trim() || null,
     media: input.media && input.media.length ? input.media : [],
     created_by: auth.user.id,
-  });
+  }).select("id").single();
   if (error) return { ok: false, error: friendly(error.message) };
+
+  // Seed story blocks so the memory reads like a memorial from the start.
+  if (mem?.id) {
+    const posts: any[] = [];
+    if (input.story?.trim())
+      posts.push({ memory_id: mem.id, family_id: me.family_id, type: "text", body: input.story.trim(), position: 0, created_by: auth.user.id });
+    (input.media || []).forEach((mm, i) => {
+      if (mm.url) posts.push({ memory_id: mem.id, family_id: me.family_id, type: mm.type === "video" ? "video" : "image", body: mm.url, position: 100 + i, created_by: auth.user.id });
+    });
+    if (posts.length) await supabase.from("memory_posts").insert(posts);
+  }
   logAction("create", "memory", input.title);
   return { ok: true };
 }

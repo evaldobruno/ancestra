@@ -23,6 +23,7 @@ export type MemorialPost = {
   body: string | null;
   caption: string | null;
   created_at: string;
+  created_by: string | null;
 };
 
 // People marked as deceased.
@@ -56,7 +57,7 @@ export async function fetchMemorial(memberId: string): Promise<MemorialPost[]> {
   const supabase = createClient();
   const { data } = await supabase
     .from("memorial_posts")
-    .select("id,type,body,caption,created_at")
+    .select("id,type,body,caption,created_at,created_by")
     .eq("member_id", memberId)
     .is("deleted_at", null)
     .order("position", { ascending: true })

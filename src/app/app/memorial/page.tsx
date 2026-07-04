@@ -5,6 +5,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { isSupabaseConfigured } from "@/lib/queries";
 import { uploadMedia } from "@/lib/storage";
 import { Comments } from "@/components/Comments";
+import { fetchViewer, type Viewer } from "@/lib/memories";
 import {
   fetchDeparted,
   fetchMemberBasic,
@@ -30,8 +31,10 @@ export default function Memorial() {
   const [current, setCurrent] = useState<Departed | null>(null);
   const [posts, setPosts] = useState<MemorialPost[]>([]);
   const [text, setText] = useState("");
+  const [caption, setCaption] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [viewer, setViewer] = useState<Viewer>({ userId: null, isSuper: false });
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -39,7 +42,11 @@ export default function Memorial() {
       setPeople(p);
       setLoading(false);
     });
+    fetchViewer().then(setViewer);
   }, []);
+
+  const canDelete = (createdBy?: string | null) =>
+    viewer.isSuper || (!!viewer.userId && viewer.userId === createdBy);
 
   async function open(person: Departed) {
     setCurrent(person);
@@ -68,10 +75,10 @@ export default function Memorial() {
     setBusy(true);
     const up = await uploadMedia(file, "memorial");
     if (!up.ok || !up.url) { setBusy(false); setMsg(up.error || "Erro"); return; }
-    const res = await addPost(current.id, up.kind === "video" ? "video" : "image", up.url);
+    const res = await addPost(current.id, up.kind === "video" ? "video" : "image", up.url, caption);
     setBusy(false);
     if (fileRef.current) fileRef.current.value = "";
-    if (res.ok) reloadPosts();
+    if (res.ok) { setCaption(""); reloadPosts(); }
     else setMsg(res.error || "Erro");
   }
 
@@ -123,11 +130,13 @@ export default function Memorial() {
           )}
           {posts.map((p) => (
             <div key={p.id} className="card group relative">
-              <button
-                onClick={() => remove(p.id)}
-                className="absolute right-3 top-3 text-sm text-red-500 opacity-60 hover:opacity-100"
-                title={pt ? "Apagar" : "Delete"}
-              >🗑️</button>
+              {canDelete(p.created_by) && (
+                <button
+                  onClick={() => remove(p.id)}
+                  className="absolute right-3 top-3 text-sm text-red-500 opacity-60 hover:opacity-100"
+                  title={pt ? "Apagar" : "Delete"}
+                >🗑️</button>
+              )}
               {p.type === "text" && (
                 <p className="whitespace-pre-wrap pr-6 text-[15px] leading-relaxed text-stone-700 dark:text-stone-200">{p.body}</p>
               )}
@@ -137,6 +146,9 @@ export default function Memorial() {
               )}
               {p.type === "video" && p.body && (
                 <video src={p.body} controls className="w-full rounded-xl" />
+              )}
+              {p.caption && p.type !== "text" && (
+                <p className="mt-2 text-center text-sm italic text-stone-500">{p.caption}</p>
               )}
             </div>
           ))}
@@ -152,6 +164,8 @@ export default function Memorial() {
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
+          <input className="input mt-2" value={caption} onChange={(e) => setCaption(e.target.value)}
+            placeholder={pt ? "Legenda (para a próxima foto/vídeo — opcional)" : "Caption (for the next photo/video — optional)"} />
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <button className="btn-primary" onClick={addText} disabled={busy || !text.trim()}>
               {pt ? "Adicionar texto" : "Add text"}

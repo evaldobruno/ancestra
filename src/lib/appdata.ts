@@ -91,7 +91,7 @@ export async function fetchDashboard(): Promise<Dash> {
   }
 }
 
-export type MemoryRow = { id: string; title: string; category: string; date: string; excerpt: string; cover?: string };
+export type MemoryRow = { id: string; title: string; category: string; date: string; excerpt: string; cover?: string; location?: string; createdBy?: string | null };
 
 function coverOf(media: any): string | undefined {
   if (!Array.isArray(media)) return undefined;
@@ -108,14 +108,14 @@ export async function fetchMemories(): Promise<{ memories: MemoryRow[]; source: 
     if (!auth?.user) return { memories: DEMO_MEMORIES as any, source: "demo" };
     const { data } = await supabase
       .from("memories")
-      .select("id,title,category,memory_date,story,media")
+      .select("id,title,category,memory_date,story,media,location,created_by")
       .is("deleted_at", null)
       .order("memory_date", { ascending: false });
     return {
       memories: (data ?? []).map((m: any) => ({
         id: m.id, title: m.title, category: m.category || "traditions",
         date: m.memory_date || "", excerpt: (m.story || "").slice(0, 120),
-        cover: coverOf(m.media),
+        cover: coverOf(m.media), location: m.location || "", createdBy: m.created_by ?? null,
       })),
       source: "supabase",
     };
