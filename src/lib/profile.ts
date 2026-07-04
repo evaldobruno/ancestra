@@ -4,8 +4,6 @@
 // Every signed-in user (except guests) can edit THEIR OWN profile:
 //  • account fields on `users` (nome, alcunha/display_name, idioma)
 //  • their person in the family (`family_members`): alcunha (known_as) + details
-// A user is tied to a person via family_members.user_id = auth.uid().
-// RLS already allows: users self-update, and writing family_members of own family.
 
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/queries";
@@ -38,7 +36,6 @@ export type MyProfile = {
   account: ProfileAccount;
   member: ProfileMember | null;
   familyName: string | null;
-  // People in my family not yet linked to a login — for "claim who I am".
   claimable: { id: string; full_name: string; known_as: string | null }[];
 };
 
@@ -90,17 +87,6 @@ export async function fetchMyProfile(): Promise<MyProfile | null> {
     familyName,
     claimable,
   };
-}
-
-// Change the signed-in user's password.
-export async function updatePassword(newPassword: string): Promise<Result> {
-  if (!isSupabaseConfigured()) return { ok: false, error: "Supabase não configurado." };
-  if (!newPassword || newPassword.length < 6)
-    return { ok: false, error: "A palavra-passe tem de ter pelo menos 6 caracteres." };
-  const supabase = createClient();
-  const { error } = await supabase.auth.updateUser({ password: newPassword });
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
 }
 
 // Update the login account (name, alcunha = display_name, language).
@@ -181,4 +167,23 @@ export async function createMyMember(input: {
   if (!me?.family_id)
     return { ok: false, error: "Ainda não tens família atribuída. Pede a um administrador." };
 
-  const { data, error } = awa
+  const { data, error } = await supabase
+    .from("family_members")
+    .insert({
+      family_id: me.family_id,
+      user_id: auth.user.id,
+      full_name: input.full_name.trim(),
+      known_as: input.known_as?.trim() || null,
+      created_by: auth.user.id,
+    })
+    .select("id")
+    .single();
+  if (error) return { ok: false, error: friendly(error.message) };
+  return { ok: true, id: data?.id };
+}
+
+function friendly(msg: string) {
+  if (/row-level security|rls|permission/i.test(msg))
+    return "Sem permissão para editar este perfil.";
+  return msg;
+}

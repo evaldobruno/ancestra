@@ -103,4 +103,5 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
         </div>
       </div>
     </main>
-  
+  );
+}
