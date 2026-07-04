@@ -71,7 +71,7 @@ export default function Landing() {
         </section>
 
         <footer className="pb-8 text-center text-xs text-slate-400">
-          {pt ? "Desenvolvido por" : "Developed by"} <span className="font-medium text-slate-200">Bruno Gonçalves & Ana Oliveira Gonçalves</span>
+          {pt ? "Desenvolvido por" : "Developed by"} <span className="font-medium text-slate-200">Bruno Gonçalves &amp; Ana Oliveira Gonçalves</span>
           {" · "}{new Date().getFullYear()}
         </footer>
       </div>

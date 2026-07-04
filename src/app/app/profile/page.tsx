@@ -8,7 +8,6 @@ import {
   fetchMyProfile,
   updateAccount,
   updateMyMember,
-  updatePassword,
   claimMember,
   createMyMember,
   type MyProfile,
@@ -40,22 +39,6 @@ export default function Profile() {
   // claim
   const [claimId, setClaimId] = useState("");
   const [newName, setNewName] = useState("");
-
-  // password
-  const [pw1, setPw1] = useState("");
-  const [pw2, setPw2] = useState("");
-  const [pwMsg, setPwMsg] = useState<string | null>(null);
-
-  async function savePassword() {
-    setPwMsg(null);
-    if (pw1.length < 6) return setPwMsg(pt ? "Mínimo 6 caracteres." : "At least 6 characters.");
-    if (pw1 !== pw2) return setPwMsg(pt ? "As palavras-passe não coincidem." : "Passwords don't match.");
-    setSaving(true);
-    const res = await updatePassword(pw1);
-    setSaving(false);
-    if (res.ok) { setPw1(""); setPw2(""); setPwMsg(pt ? "Palavra-passe alterada!" : "Password changed!"); }
-    else setPwMsg(res.error || "Erro");
-  }
 
   function hydrate(p: MyProfile) {
     setData(p);
@@ -188,28 +171,6 @@ export default function Profile() {
         </p>
       )}
 
-      {/* Password */}
-      <div className="card space-y-3">
-        <h2 className="font-semibold">{pt ? "Palavra-passe" : "Password"}</h2>
-        <p className="text-sm text-stone-400">
-          {pt ? "Muda aqui a tua palavra-passe (ideal para trocar uma provisória)." : "Change your password here."}
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="label">{pt ? "Nova palavra-passe" : "New password"}</label>
-            <input className="input" type="password" value={pw1} onChange={(e) => setPw1(e.target.value)} />
-          </div>
-          <div>
-            <label className="label">{pt ? "Repetir" : "Repeat"}</label>
-            <input className="input" type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} />
-          </div>
-        </div>
-        <button className="btn-primary" onClick={savePassword} disabled={saving || !pw1}>
-          {pt ? "Mudar palavra-passe" : "Change password"}
-        </button>
-        {pwMsg && <p className="text-sm text-sage-700 dark:text-sage-300">{pwMsg}</p>}
-      </div>
-
       {/* Account */}
       <fieldset disabled={isGuest || saving} className="card space-y-3 disabled:opacity-60">
         <h2 className="font-semibold">{pt ? "Conta" : "Account"}</h2>
@@ -289,4 +250,39 @@ export default function Profile() {
             <p className="text-sm text-stone-400">
               {pt
                 ? "Ainda não estás ligado a uma pessoa na árvore. Escolhe quem és, ou cria a tua ficha."
-                
+                : "You're not linked to a person yet. Pick who you are, or create your profile."}
+            </p>
+            {data && data.claimable.length > 0 && (
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="min-w-[220px] flex-1">
+                  <label className="label">{pt ? "Sou esta pessoa" : "I am this person"}</label>
+                  <select className="input" value={claimId} onChange={(e) => setClaimId(e.target.value)}>
+                    <option value="">{pt ? "— escolher —" : "— choose —"}</option>
+                    {data.claimable.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.full_name}{c.known_as ? ` (${c.known_as})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button className="btn-primary" onClick={doClaim} disabled={saving || !claimId}>
+                  {pt ? "Associar" : "Link"}
+                </button>
+              </div>
+            )}
+            <div className="flex flex-wrap items-end gap-2 border-t border-brand-50 pt-3 dark:border-brand-800">
+              <div className="min-w-[220px] flex-1">
+                <label className="label">{pt ? "Ou cria a tua ficha (nome)" : "Or create yours (name)"}</label>
+                <input className="input" value={newName} onChange={(e) => setNewName(e.target.value)}
+                  placeholder={data?.account.full_name ?? ""} />
+              </div>
+              <button className="btn-ghost" onClick={doCreate} disabled={saving || !newName.trim()}>
+                {pt ? "Criar ficha" : "Create"}
+              </button>
+            </div>
+          </div>
+        )
+      )}
+    </div>
+  );
+}
