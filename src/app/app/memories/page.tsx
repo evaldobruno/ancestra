@@ -247,7 +247,15 @@ export default function Memories() {
                   title={pt ? "Apagar" : "Delete"}>🗑️</button>
               )}
               <button onClick={() => open(m)} className="block w-full text-left">
-                {m.cover ? (
+                {m.cover && m.coverType === "video" ? (
+                  <div className="relative mb-2">
+                    <video src={m.cover} muted playsInline preload="metadata"
+                      className="max-h-40 w-full rounded-xl bg-black object-contain" />
+                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white">▶</span>
+                    </span>
+                  </div>
+                ) : m.cover ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={m.cover} alt=""
                     className="mb-2 max-h-40 w-full rounded-xl bg-brand-50 object-contain dark:bg-stone-800" />

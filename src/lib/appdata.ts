@@ -91,12 +91,16 @@ export async function fetchDashboard(): Promise<Dash> {
   }
 }
 
-export type MemoryRow = { id: string; title: string; category: string; date: string; excerpt: string; cover?: string; location?: string; createdBy?: string | null };
+export type MemoryRow = { id: string; title: string; category: string; date: string; excerpt: string; cover?: string; coverType?: "image" | "video"; location?: string; createdBy?: string | null };
 
-function coverOf(media: any): string | undefined {
-  if (!Array.isArray(media)) return undefined;
-  const img = media.find((m) => m && (m.type === "image" || /^https?:/.test(m.url || "")));
-  return img?.url || media[0]?.url || undefined;
+function coverOf(media: any): { url?: string; type?: "image" | "video" } {
+  if (!Array.isArray(media) || !media.length) return {};
+  const img = media.find((m) => m && m.type === "image");
+  if (img?.url) return { url: img.url, type: "image" };
+  const vid = media.find((m) => m && m.type === "video");
+  if (vid?.url) return { url: vid.url, type: "video" };
+  const any = media[0];
+  return any?.url ? { url: any.url, type: any.type === "video" ? "video" : "image" } : {};
 }
 
 export async function fetchMemories(): Promise<{ memories: MemoryRow[]; source: "supabase" | "demo" }> {
@@ -111,12 +115,35 @@ export async function fetchMemories(): Promise<{ memories: MemoryRow[]; source: 
       .select("id,title,category,memory_date,story,media,location,created_by")
       .is("deleted_at", null)
       .order("memory_date", { ascending: false });
+
+    // Cover can also come from the memory's media blocks (photos/videos added inside).
+    const ids = (data ?? []).map((m: any) => m.id);
+    const coverMap: Record<string, { url: string; type: "image" | "video" }> = {};
+    if (ids.length) {
+      const { data: mp } = await supabase
+        .from("memory_posts")
+        .select("memory_id,type,body,position,created_at")
+        .in("memory_id", ids)
+        .is("deleted_at", null)
+        .in("type", ["image", "video"])
+        .order("position", { ascending: true })
+        .order("created_at", { ascending: true });
+      (mp ?? []).forEach((p: any) => {
+        if (!coverMap[p.memory_id] && p.body)
+          coverMap[p.memory_id] = { url: p.body, type: p.type === "video" ? "video" : "image" };
+      });
+    }
+
     return {
-      memories: (data ?? []).map((m: any) => ({
-        id: m.id, title: m.title, category: m.category || "traditions",
-        date: m.memory_date || "", excerpt: (m.story || "").slice(0, 120),
-        cover: coverOf(m.media), location: m.location || "", createdBy: m.created_by ?? null,
-      })),
+      memories: (data ?? []).map((m: any) => {
+        const fromMedia = coverOf(m.media);
+        const cov = coverMap[m.id] || fromMedia;
+        return {
+          id: m.id, title: m.title, category: m.category || "traditions",
+          date: m.memory_date || "", excerpt: (m.story || "").slice(0, 120),
+          cover: cov.url, coverType: cov.type, location: m.location || "", createdBy: m.created_by ?? null,
+        };
+      }),
       source: "supabase",
     };
   } catch {
