@@ -92,6 +92,17 @@ export async function fetchMyProfile(): Promise<MyProfile | null> {
   };
 }
 
+// Change the signed-in user's password.
+export async function updatePassword(newPassword: string): Promise<Result> {
+  if (!isSupabaseConfigured()) return { ok: false, error: "Supabase não configurado." };
+  if (!newPassword || newPassword.length < 6)
+    return { ok: false, error: "A palavra-passe tem de ter pelo menos 6 caracteres." };
+  const supabase = createClient();
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 // Update the login account (name, alcunha = display_name, language).
 export async function updateAccount(input: {
   full_name?: string;
@@ -170,23 +181,4 @@ export async function createMyMember(input: {
   if (!me?.family_id)
     return { ok: false, error: "Ainda não tens família atribuída. Pede a um administrador." };
 
-  const { data, error } = await supabase
-    .from("family_members")
-    .insert({
-      family_id: me.family_id,
-      user_id: auth.user.id,
-      full_name: input.full_name.trim(),
-      known_as: input.known_as?.trim() || null,
-      created_by: auth.user.id,
-    })
-    .select("id")
-    .single();
-  if (error) return { ok: false, error: friendly(error.message) };
-  return { ok: true, id: data?.id };
-}
-
-function friendly(msg: string) {
-  if (/row-level security|rls|permission/i.test(msg))
-    return "Sem permissão para editar este perfil.";
-  return msg;
-}
+  const { data, error } = awa

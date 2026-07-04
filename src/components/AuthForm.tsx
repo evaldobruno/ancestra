@@ -16,6 +16,25 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function onForgot() {
+    setError(null);
+    setNotice(null);
+    if (!email.trim()) {
+      setError(mode === "signin" ? "Escreve o teu email primeiro." : "");
+      return;
+    }
+    try {
+      const supabase = createClient();
+      await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/reset`,
+      });
+      setNotice("Se o email existir, enviámos um link para recuperar a palavra-passe. Verifica a tua caixa de entrada.");
+    } catch (e: any) {
+      setError(String(e?.message ?? "Erro"));
+    }
+  }
 
   const configured =
     !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -89,19 +108,4 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
             <input className="input" type="password" placeholder={t("auth.password")} value={password}
               onChange={(e) => setPassword(e.target.value)} />
             {error && <p className="text-sm text-red-600">{error}</p>}
-            <button type="submit" className="btn-primary w-full py-3" disabled={loading}>
-              {loading ? t("common.loading") : mode === "signin" ? t("auth.signin") : t("auth.signup")}
-            </button>
-          </form>
-          <div className="mt-4 text-center text-sm text-stone-500">
-            {mode === "signin" ? (
-              <>{t("auth.noaccount")} <Link href="/register" className="text-brand-600 underline">{t("auth.signup")}</Link></>
-            ) : (
-              <>{t("auth.haveaccount")} <Link href="/login" className="text-brand-600 underline">{t("auth.signin")}</Link></>
-            )}
-          </div>
-        </div>
-      </div>
-    </main>
-  );
-}
+            {notice && <p className="rounded-lg bg

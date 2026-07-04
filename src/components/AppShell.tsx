@@ -67,7 +67,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ← {t("nav.signout")}
         </Link>
         <div className="mt-6 px-3 text-[11px] leading-relaxed text-slate-400">
-          Desenvolvido por<br /><span className="font-medium">Bruno Gonçalves</span>
+          Desenvolvido por<br /><span className="font-medium">Bruno Gonçalves & Ana Oliveira Gonçalves</span>
         </div>
       </aside>
 
@@ -93,7 +93,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <main className="flex-1 p-4 sm:p-6">{children}</main>
         <footer className="border-t border-white/10 px-4 py-3 text-center text-[11px] text-slate-400 md:hidden">
-          Desenvolvido por Bruno Gonçalves
+          Desenvolvido por Bruno Gonçalves & Ana Oliveira Gonçalves
         </footer>
       </div>
       </div>
