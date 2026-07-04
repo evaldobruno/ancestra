@@ -7,6 +7,7 @@ import { useFamilyData } from "@/lib/useFamilyData";
 import { SourceBadge } from "@/components/SourceBadge";
 import { MemberForm } from "@/components/MemberForm";
 import { RelationshipForm } from "@/components/RelationshipForm";
+import { NightSky } from "@/components/NightSky";
 import { fetchMemberById, type EditableMember } from "@/lib/mutations";
 
 // ── Layout: rows = generations; couples sit side by side; children centre
@@ -250,8 +251,10 @@ export default function FamilyTree() {
 
       <div
         ref={containerRef}
-        className={`relative h-[70vh] overflow-hidden rounded-3xl border border-brand-100 dark:border-stone-800 ${
-          immersive ? "tree-immersive" : "bg-white dark:bg-stone-900"
+        className={`relative overflow-hidden rounded-3xl border transition-all duration-500 ${
+          immersive
+            ? "h-[82vh] border-white/10 night-sky shadow-2xl"
+            : "h-[70vh] border-brand-100 bg-white dark:border-stone-800 dark:bg-stone-900"
         }`}
         onWheel={onWheel}
         onMouseDown={onDown}
@@ -263,12 +266,19 @@ export default function FamilyTree() {
         onTouchEnd={onTouchEnd}
         style={{ cursor: dragging.current ? "grabbing" : "grab", touchAction: "none" }}
       >
+        {/* Immersive: animated starry sky behind the family */}
+        {immersive && (
+          <div className="pointer-events-none absolute inset-0">
+            <NightSky constellation={false} />
+          </div>
+        )}
         <div
           className="absolute left-1/2 top-16 origin-top"
           style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})` }}
         >
           {/* Connection lines */}
-          <svg className="pointer-events-none absolute overflow-visible" style={{ left: 0, top: 0 }}>
+          <svg className="pointer-events-none absolute overflow-visible"
+            style={{ left: 0, top: 0, filter: immersive ? "drop-shadow(0 0 5px rgba(233,199,102,0.55))" : undefined }}>
             {edges.map((e, i) => {
               const x1 = e.from.x, y1 = e.from.y + (e.kind === "parent" ? NODE_H / 2 : 0);
               const x2 = e.to.x, y2 = e.to.y - (e.kind === "parent" ? NODE_H / 2 : 0);
@@ -335,6 +345,12 @@ export default function FamilyTree() {
             );
           })}
         </div>
+
+        {/* Immersive: cinematic vignette on top */}
+        {immersive && (
+          <div className="pointer-events-none absolute inset-0"
+            style={{ boxShadow: "inset 0 0 200px 60px rgba(0,0,0,0.6)" }} />
+        )}
 
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center text-stone-400">
