@@ -5,7 +5,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import type { Member } from "@/lib/demo-data";
 import { useFamilyData } from "@/lib/useFamilyData";
 import { SourceBadge } from "@/components/SourceBadge";
-import { MemberForm } from "@/components/MemberForm";
+import { MemberForm, type LinkTo } from "@/components/MemberForm";
 import { RelationshipForm } from "@/components/RelationshipForm";
 import { NightSky } from "@/components/NightSky";
 import { fetchMemberById, type EditableMember } from "@/lib/mutations";
@@ -29,6 +29,15 @@ function fmtDate(s?: string) {
   const yy = String(y).slice(-2);
   return `${String(d).padStart(2, "0")}.${String(m).padStart(2, "0")}.${yy}`;
 }
+
+// Gender side-stripe colour (blue / pink / neutral), Geneanet-style.
+function genderColor(g?: string) {
+  const s = (g || "").toLowerCase();
+  if (s === "male") return "#4a90d9";
+  if (s === "female") return "#d9689f";
+  return "#9aa6b8";
+}
+const yearOf = (s?: string) => (s ? s.slice(0, 4) : "");
 
 function layout(members: Member[]): Record<string, Pos> {
   const pos: Record<string, Pos> = {};
@@ -118,6 +127,7 @@ export default function FamilyTree() {
   const { members, source, loading, reload } = useFamilyData();
   const [memberOpen, setMemberOpen] = useState(false);
   const [editMember, setEditMember] = useState<EditableMember | null>(null);
+  const [linkTo, setLinkTo] = useState<LinkTo | null>(null);
   const [relOpen, setRelOpen] = useState(false);
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState<Pos>({ x: 0, y: 0 });
@@ -146,6 +156,15 @@ export default function FamilyTree() {
     const clamped = Math.max(0.2, Math.min(2.5, s));
     setScale(clamped);
     setPan({ x: 0, y: 16 - 64 + (NODE_H / 2) * clamped });
+  }
+
+  // Open the member form to add a relative of the selected person.
+  function openAddRelative(relation: LinkTo["relation"], gender?: string) {
+    if (!selected) return;
+    setEditMember(null);
+    setLinkTo({ memberId: selected.id, memberName: selected.knownAs, relation, gender });
+    setMemberOpen(true);
+    setSelected(null);
   }
 
   // Auto-fit once the tree has loaded.
@@ -211,41 +230,42 @@ export default function FamilyTree() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{t("tree.title")}</h1>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="truncate text-2xl font-bold">{t("tree.title")}</h1>
           <SourceBadge source={source} loading={loading} />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            className="input max-w-[200px]"
-            placeholder={t("tree.search")}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <button className="btn-ghost text-sm" onClick={() => setScale((s) => Math.min(2.5, s + 0.2))}>＋</button>
-          <button className="btn-ghost text-sm" onClick={() => setScale((s) => Math.max(0.4, s - 0.2))}>－</button>
-          <button className="btn-ghost text-sm" onClick={fitView} title={locale === "pt" ? "Ver tudo" : "Fit"}>⤢</button>
-          <button
-            className={`text-sm ${immersive ? "btn-primary" : "btn-ghost"}`}
-            onClick={() => setImmersive((v) => !v)}
-          >
-            ✨ {t("tree.immersive")}
-          </button>
-          <button className="btn-ghost text-sm" onClick={() => { setEditMember(null); setMemberOpen(true); }}>
-            👤 {locale === "pt" ? "Membro" : "Member"}
-          </button>
-          <button className="btn-primary text-sm" onClick={() => setRelOpen(true)}>
-            🔗 {locale === "pt" ? "Ligar" : "Link"}
-          </button>
-        </div>
+        <button
+          className={`shrink-0 rounded-xl px-3 py-2 text-sm ${immersive ? "btn-primary" : "btn-ghost"}`}
+          onClick={() => setImmersive((v) => !v)}
+          title={t("tree.immersive")}
+        >
+          ✨<span className="ml-1 hidden sm:inline">{t("tree.immersive")}</span>
+        </button>
+      </div>
+
+      <div className="mb-4 flex items-center gap-2">
+        <input
+          className="input min-w-0 flex-1"
+          placeholder={t("tree.search")}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <button className="btn-primary shrink-0 whitespace-nowrap px-3 text-sm"
+          onClick={() => { setEditMember(null); setLinkTo(null); setMemberOpen(true); }}>
+          ＋<span className="ml-1 hidden sm:inline">{locale === "pt" ? "Membro" : "Member"}</span>
+        </button>
+        <button className="btn-ghost shrink-0 whitespace-nowrap px-3 text-sm" onClick={() => setRelOpen(true)}>
+          🔗<span className="ml-1 hidden sm:inline">{locale === "pt" ? "Ligar" : "Link"}</span>
+        </button>
       </div>
 
       <MemberForm
         open={memberOpen}
-        onClose={() => { setMemberOpen(false); setEditMember(null); }}
+        onClose={() => { setMemberOpen(false); setEditMember(null); setLinkTo(null); }}
         onSaved={reload}
         editMember={editMember}
+        linkTo={linkTo}
       />
       <RelationshipForm open={relOpen} onClose={() => setRelOpen(false)} onSaved={reload} />
 
@@ -272,15 +292,22 @@ export default function FamilyTree() {
             <NightSky constellation={false} />
           </div>
         )}
-        {/* Immersive: floating controls (the top toolbar is hidden in fullscreen) */}
+        {/* Exit button in fullscreen immersive mode */}
         {immersive && (
-          <div className="absolute right-4 top-4 z-20 flex items-center gap-2">
-            <button className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-white backdrop-blur hover:bg-white/20" onClick={() => setScale((s) => Math.min(2.5, s + 0.2))}>＋</button>
-            <button className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-white backdrop-blur hover:bg-white/20" onClick={() => setScale((s) => Math.max(0.2, s - 0.2))}>－</button>
-            <button className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-white backdrop-blur hover:bg-white/20" onClick={fitView}>⤢</button>
-            <button className="btn-glow px-4 py-1.5 text-sm" onClick={() => setImmersive(false)}>✕ {locale === "pt" ? "Sair" : "Exit"}</button>
-          </div>
+          <button className="btn-glow absolute right-4 top-4 z-20 px-4 py-1.5 text-sm"
+            onClick={() => setImmersive(false)}>
+            ✕ {locale === "pt" ? "Sair" : "Exit"}
+          </button>
         )}
+        {/* Floating zoom / fit controls (always available — great on mobile) */}
+        <div className="absolute bottom-4 right-4 z-20 flex flex-col gap-2">
+          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-lg text-white backdrop-blur hover:bg-black/60"
+            onClick={() => setScale((s) => Math.min(2.5, s + 0.25))} aria-label="Zoom in">＋</button>
+          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-lg text-white backdrop-blur hover:bg-black/60"
+            onClick={() => setScale((s) => Math.max(0.2, s - 0.25))} aria-label="Zoom out">－</button>
+          <button className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-sm text-white backdrop-blur hover:bg-black/60"
+            onClick={fitView} title={locale === "pt" ? "Ver tudo" : "Fit"} aria-label="Fit">⤢</button>
+        </div>
         <div
           className="absolute left-1/2 top-16 origin-top"
           style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})` }}
@@ -329,6 +356,9 @@ export default function FamilyTree() {
                   boxShadow: hit ? `0 0 0 4px ${m.color}55` : undefined,
                 }}
               >
+                {/* Gender side-stripe (blue / pink) */}
+                <span className="pointer-events-none absolute left-0 top-0 z-10 h-full w-1.5"
+                  style={{ background: genderColor(m.gender) }} />
                 {/* Photo fills most of the card */}
                 {m.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -342,12 +372,12 @@ export default function FamilyTree() {
                     {m.knownAs.slice(0, 1)}
                   </div>
                 )}
-                {/* Name + birth date on one line */}
+                {/* Name + years on one line */}
                 <div className="flex shrink-0 items-baseline justify-center gap-1.5 px-2 py-1.5">
                   <span className="truncate text-sm font-semibold leading-tight">{m.knownAs}</span>
                   <span className="shrink-0 text-[11px] text-stone-400">
                     {fmtDate(m.birthDate)}
-                    {m.status === "deceased" ? " †" : ""}
+                    {m.status === "deceased" ? (m.deathDate ? ` † ${yearOf(m.deathDate)}` : " †") : ""}
                   </span>
                 </div>
               </button>
@@ -397,9 +427,25 @@ export default function FamilyTree() {
             </div>
             <dl className="mt-4 space-y-1 text-sm">
               <Row k={t("members.bornIn")} v={`${selected.birthPlace ?? "—"} · ${fmtDate(selected.birthDate)}`} />
+              {selected.status === "deceased" && (
+                <Row k={locale === "pt" ? "Faleceu" : "Died"} v={selected.deathDate ? fmtDate(selected.deathDate) : "—"} />
+              )}
               <Row k={t("members.profession")} v={selected.profession ?? "—"} />
               <Row k={t("tree.generation")} v={String(selected.generation)} />
             </dl>
+
+            <div className="mt-4">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">
+                {locale === "pt" ? "Adicionar familiar" : "Add relative"}
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <button className="btn-ghost" onClick={() => openAddRelative("parentOf", "male")}>＋ {locale === "pt" ? "Pai" : "Father"}</button>
+                <button className="btn-ghost" onClick={() => openAddRelative("parentOf", "female")}>＋ {locale === "pt" ? "Mãe" : "Mother"}</button>
+                <button className="btn-ghost" onClick={() => openAddRelative("spouseOf")}>＋ {locale === "pt" ? "Cônjuge" : "Spouse"}</button>
+                <button className="btn-ghost" onClick={() => openAddRelative("childOf", selected.gender)}>＋ {locale === "pt" ? "Filho(a)" : "Child"}</button>
+              </div>
+            </div>
+
             <div className="mt-4 flex gap-2">
               <button
                 className="btn-primary flex-1"

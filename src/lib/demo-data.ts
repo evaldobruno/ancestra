@@ -15,6 +15,7 @@ export type Member = {
   color: string;
   avatarUrl?: string;
   gender?: string;
+  deathDate?: string;
   parents: string[];
   spouse?: string;
   spouseDivorced?: boolean;

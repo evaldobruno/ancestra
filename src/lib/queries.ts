@@ -27,6 +27,7 @@ type DbMember = {
   profession: string | null;
   status: string | null;
   gender: string | null;
+  death_date: string | null;
   avatar_url: string | null;
 };
 
@@ -94,6 +95,7 @@ function assemble(members: DbMember[], rels: DbRel[], tree: DbTree[]): Member[] 
     color: colorFor(m.id, i),
     avatarUrl: m.avatar_url || undefined,
     gender: m.gender || undefined,
+    deathDate: m.death_date || undefined,
     parents: parentsOf.get(m.id) ?? [],
     spouse: spouseOf.get(m.id),
     spouseDivorced: divorced.has(m.id),
@@ -114,7 +116,7 @@ export async function fetchFamilyMembers(): Promise<{ members: Member[]; source:
     const [{ data: members, error: e1 }, { data: rels }, { data: tree }] = await Promise.all([
       supabase
         .from("family_members")
-        .select("id,full_name,known_as,birth_date,birth_place,profession,status,gender,avatar_url")
+        .select("id,full_name,known_as,birth_date,birth_place,profession,status,gender,death_date,avatar_url")
         .is("deleted_at", null)
         .order("birth_date", { ascending: true }),
       supabase.from("family_relationships").select("from_member,to_member,type").is("deleted_at", null),

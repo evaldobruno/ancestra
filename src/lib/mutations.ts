@@ -39,6 +39,7 @@ export type NewMember = {
   nationality?: string;
   profession?: string;
   avatar_url?: string;
+  death_date?: string;
   status?: "alive" | "deceased" | "unknown" | "historical";
 };
 
@@ -260,6 +261,7 @@ export type EditableMember = {
   nationality: string | null;
   profession: string | null;
   avatar_url: string | null;
+  death_date: string | null;
   status: string;
 };
 
@@ -269,7 +271,7 @@ export async function fetchMemberById(id: string): Promise<EditableMember | null
   const supabase = createClient();
   const { data, error } = await supabase
     .from("family_members")
-    .select("id,family_id,full_name,known_as,gender,birth_date,birth_place,nationality,profession,avatar_url,status")
+    .select("id,family_id,full_name,known_as,gender,birth_date,birth_place,nationality,profession,avatar_url,death_date,status")
     .eq("id", id)
     .single();
   if (error || !data) return null;
@@ -296,6 +298,7 @@ export async function updateMember(
     nationality: input.nationality?.trim() || null,
     profession: input.profession?.trim() || null,
     avatar_url: input.avatar_url?.trim() || null,
+    death_date: input.death_date || null,
     status: input.status || "alive",
     updated_by: auth.user.id,
   };
@@ -341,6 +344,7 @@ export async function createMember(input: NewMember): Promise<Result & { id?: st
     nationality: input.nationality?.trim() || null,
     profession: input.profession?.trim() || null,
     avatar_url: input.avatar_url?.trim() || null,
+    death_date: input.death_date || null,
     status: input.status || "alive",
     created_by: auth.user.id,
   };
@@ -352,6 +356,22 @@ export async function createMember(input: NewMember): Promise<Result & { id?: st
   if (error) return { ok: false, error: friendly(error.message) };
   logAction("create", "member", input.full_name, data?.id);
   return { ok: true, id: data?.id };
+}
+
+// Parent member ids of a given member (for sibling linking).
+export async function fetchMemberParents(memberId: string): Promise<string[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("family_relationships")
+    .select("from_member,to_member,type")
+    .is("deleted_at", null);
+  const out: string[] = [];
+  (data ?? []).forEach((r: any) => {
+    if (r.type === "child" && r.to_member === memberId) out.push(r.from_member);
+    if (r.type === "parent" && r.from_member === memberId) out.push(r.to_member);
+  });
+  return [...new Set(out)];
 }
 
 export async function createRelationship(input: NewRelationship): Promise<Result> {
