@@ -1,0 +1,147 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+body { @apply bg-brand-50 text-stone-800 antialiased; }
+.dark body { @apply bg-brand-950 text-stone-100; }
+
+/* Elegant wordmark for the app name */
+.wordmark {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.gold-text {
+  background: linear-gradient(180deg, #e6c668 0%, #c9982f 55%, #a87d24 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Large, touch-friendly tap targets on mobile (spec §23) */
+@media (max-width: 640px) {
+  button, a[role="button"] { min-height: 44px; }
+}
+
+.card {
+  @apply rounded-2xl border border-brand-100 bg-white p-5 shadow-sm;
+}
+.dark .card { @apply border-stone-800 bg-stone-900; }
+
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5
+         font-medium text-white transition hover:bg-brand-600 active:scale-[.98];
+}
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-brand-200 px-4 py-2.5
+         font-medium text-brand-700 transition hover:bg-brand-50;
+}
+.dark .btn-ghost { @apply border-brand-700 text-brand-100 hover:bg-brand-900; }
+
+/* Gold accent button (premium call-to-action) */
+.btn-gold {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-semibold
+         text-brand-900 transition active:scale-[.98];
+  background: linear-gradient(180deg, #e6c668 0%, #cfa23c 100%);
+  box-shadow: 0 1px 2px rgba(0,0,0,.15);
+}
+.btn-gold:hover { filter: brightness(1.05); }
+
+.input {
+  @apply w-full rounded-xl border border-brand-200 bg-white px-4 py-2.5 text-stone-800 outline-none placeholder:text-stone-400
+         focus:border-brand-400 focus:ring-2 focus:ring-brand-200;
+}
+.dark .input { @apply border-stone-700 bg-stone-900 text-stone-100 focus:ring-brand-900; }
+
+/* Form styling — clean, Google-Forms-like */
+.label {
+  @apply mb-1 block text-sm font-medium text-stone-600 dark:text-stone-300;
+}
+.label .req { @apply text-brand-500; }
+.field { @apply mb-4; }
+.hint { @apply mt-1 text-xs text-stone-400; }
+.form-grid { @apply grid grid-cols-1 gap-x-4 sm:grid-cols-2; }
+select.input { @apply appearance-none bg-white pr-9; }
+.dark select.input { @apply bg-stone-900; }
+
+/* Modal overlay (in-flow faux viewport, never position:fixed issues) */
+.modal-overlay {
+  @apply fixed inset-0 z-40 flex items-end justify-center bg-black/40 p-0 backdrop-blur-sm sm:items-center sm:p-6;
+}
+.modal-card {
+  @apply max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl dark:bg-stone-900;
+}
+.modal-accent {
+  @apply rounded-t-3xl bg-gradient-to-r from-brand-500 to-brand-600 px-6 py-5 text-white;
+}
+.section-title {
+  @apply mb-3 mt-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-stone-400;
+}
+
+/* Immersive tree canvas background */
+.tree-immersive {
+  background:
+    radial-gradient(1100px 560px at 50% -10%, rgba(51,82,156,.14), transparent),
+    radial-gradient(900px 500px at 88% 112%, rgba(207,162,60,.14), transparent);
+}
+.dark .tree-immersive {
+  background:
+    radial-gradient(1100px 560px at 50% -10%, rgba(126,155,212,.20), transparent),
+    radial-gradient(900px 500px at 88% 112%, rgba(207,162,60,.16), transparent),
+    #0b1428;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   "Constellation" spectacular theme (hero + auth backgrounds)
+   ───────────────────────────────────────────────────────────── */
+.night-sky {
+  background: radial-gradient(120% 120% at 50% 0%, #16264d 0%, #0b1428 55%, #070d1c 100%);
+}
+.nd-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* Shimmering gold wordmark */
+.nd-wordmark {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  background: linear-gradient(100deg,#8a6d1f 0%,#e9c766 35%,#fff4cf 50%,#e9c766 65%,#8a6d1f 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 4px 24px rgba(212,164,55,.35));
+  animation: ndShimmer 5s linear infinite;
+}
+@keyframes ndShimmer { 0% { background-position: 150% 0 } 100% { background-position: -150% 0 } }
+@keyframes ndRise { from { opacity: 0; transform: translateY(24px) scale(.96) } to { opacity: 1; transform: none } }
+@keyframes ndFade { to { opacity: 1 } }
+@keyframes ndLine { to { width: 180px } }
+.nd-rise { animation: ndRise 1s cubic-bezier(.2,.7,.2,1) both; }
+.nd-fade { opacity: 0; animation: ndFade 1s ease forwards; }
+.nd-fade-1 { animation-delay: .3s; }
+.nd-fade-2 { animation-delay: .6s; }
+.nd-fade-3 { animation-delay: .9s; }
+.nd-rule { height: 2px; width: 0; margin: 14px auto 0;
+  background: linear-gradient(90deg,transparent,#d4a437,transparent);
+  animation: ndLine 1.1s ease .5s forwards; }
+
+/* Glowing gold CTA */
+.btn-glow {
+  cursor: pointer; border: none; border-radius: 999px; font-weight: 700;
+  color: #20160a; background: linear-gradient(180deg,#f0d183,#d4a437);
+  box-shadow: 0 8px 30px rgba(212,164,55,.45); transition: transform .2s, box-shadow .2s;
+}
+.btn-glow:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 12px 40px rgba(212,164,55,.6); }
+.btn-glass {
+  cursor: pointer; border-radius: 999px; font-weight: 600; color: #e9eefb;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(233,199,102,.4);
+  backdrop-filter: blur(6px); transition: transform .2s, background .2s;
+}
+.btn-glass:hover { transform: translateY(-2px); background: rgba(255,255,255,.12); }
+
+@media (prefers-reduced-motion: reduce) {
+  .nd-wordmark, .nd-rise, .nd-fade, .nd-rule { animation: none !important; opacity: 1 !important; width: 180px; }
+}

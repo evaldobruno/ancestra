@@ -1,0 +1,19 @@
+# Configuração do Netlify para o Ancestra (Next.js 14 App Router).
+# Assume que a RAIZ do repositório é a pasta "familyhub".
+
+[build]
+  command = "npm run build"
+  # NÃO definir "publish" — o runtime do Next.js trata disso automaticamente.
+  # (definir publish=".next" à mão causa "Page not found" 404.)
+
+[build.environment]
+  NODE_VERSION = "20"
+  # Projeto Supabase dedicado da Ancestra (família Queiroz).
+  # A anon key é pública por natureza (protegida pelas regras RLS).
+  NEXT_PUBLIC_SUPABASE_URL = "https://boclaewfqhnlimpqejzb.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJvY2xhZXdmcWhubGltcHFlanpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNjM4MzYsImV4cCI6MjA5ODczOTgzNn0.O2uCcDm7p89CDC3E-7F93i5xXivXxq0Wi0LHpDp8eZ4"
+  NEXT_PUBLIC_SUPABASE_SCHEMA = "ancestra"
+
+# Runtime oficial do Next.js no Netlify (trata de SSR, rotas /api, imagens, etc.)
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
