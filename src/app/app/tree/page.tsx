@@ -121,7 +121,7 @@ export default function FamilyTree() {
   const [relOpen, setRelOpen] = useState(false);
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState<Pos>({ x: 0, y: 0 });
-  const [immersive, setImmersive] = useState(true);
+  const [immersive, setImmersive] = useState(false);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Member | null>(null);
   const dragging = useRef<{ x: number; y: number } | null>(null);
@@ -154,7 +154,7 @@ export default function FamilyTree() {
       const id = setTimeout(fitView, 60);
       return () => clearTimeout(id);
     }
-  }, [loading, members.length]);
+  }, [loading, members.length, immersive]);
 
   // Build edges: parent→child and spouse links
   const edges = useMemo(() => {
@@ -251,10 +251,10 @@ export default function FamilyTree() {
 
       <div
         ref={containerRef}
-        className={`relative overflow-hidden rounded-3xl border transition-all duration-500 ${
+        className={`overflow-hidden transition-all duration-300 ${
           immersive
-            ? "h-[82vh] border-white/10 night-sky shadow-2xl"
-            : "h-[70vh] border-brand-100 bg-white dark:border-stone-800 dark:bg-stone-900"
+            ? "fixed inset-0 z-50 night-sky"
+            : "relative h-[70vh] rounded-3xl border border-brand-100 bg-white dark:border-stone-800 dark:bg-stone-900"
         }`}
         onWheel={onWheel}
         onMouseDown={onDown}
@@ -270,6 +270,15 @@ export default function FamilyTree() {
         {immersive && (
           <div className="pointer-events-none absolute inset-0">
             <NightSky constellation={false} />
+          </div>
+        )}
+        {/* Immersive: floating controls (the top toolbar is hidden in fullscreen) */}
+        {immersive && (
+          <div className="absolute right-4 top-4 z-20 flex items-center gap-2">
+            <button className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-white backdrop-blur hover:bg-white/20" onClick={() => setScale((s) => Math.min(2.5, s + 0.2))}>＋</button>
+            <button className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-white backdrop-blur hover:bg-white/20" onClick={() => setScale((s) => Math.max(0.2, s - 0.2))}>－</button>
+            <button className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-white backdrop-blur hover:bg-white/20" onClick={fitView}>⤢</button>
+            <button className="btn-glow px-4 py-1.5 text-sm" onClick={() => setImmersive(false)}>✕ {locale === "pt" ? "Sair" : "Exit"}</button>
           </div>
         )}
         <div
