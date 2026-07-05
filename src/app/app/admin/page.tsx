@@ -355,13 +355,13 @@ export default function Admin() {
         <h2 className="mb-1 font-semibold">{pt ? "Nova família (ramo)" : "New family (branch)"}</h2>
         <p className="mb-4 text-sm text-stone-400">
           {pt
-            ? "A Gonçalves é o tronco. Cria ramos (ex.: Bravo Gonçalves) e escolhe a família-mãe à qual se ligam."
-            : "Gonçalves is the trunk. Create branches and pick the parent family they link to."}
+            ? "A família Queiroz é o tronco. Cria ramos (ex.: Gonçalves) e escolhe a família-mãe à qual se ligam."
+            : "The Queiroz family is the trunk. Create branches (e.g. Gonçalves) and pick the parent family they link to."}
         </p>
         <div className="flex flex-wrap items-end gap-2">
           <div className="min-w-[200px] flex-1">
             <label className="label">{pt ? "Nome da família" : "Family name"}</label>
-            <input className="input" placeholder={pt ? "Ex.: Família Bravo Gonçalves" : "e.g. Família Bravo Gonçalves"}
+            <input className="input" placeholder={pt ? "Ex.: Família Gonçalves" : "e.g. Família Gonçalves"}
               value={famName} onChange={(e) => setFamName(e.target.value)} />
           </div>
           <div>
