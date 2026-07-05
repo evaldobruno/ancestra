@@ -16,13 +16,6 @@ const EMPTY = {
   media_type: "image",
 };
 
-const CATS = [
-  { v: "traditions", pt: "Tradições", en: "Traditions", icon: "🕯️" },
-  { v: "recipes", pt: "Receitas", en: "Recipes", icon: "🍰" },
-  { v: "travel", pt: "Viagens", en: "Travel", icon: "✈️" },
-  { v: "childhood", pt: "Infância", en: "Childhood", icon: "🧸" },
-];
-
 export function MemoryForm({
   open,
   onClose,
@@ -126,21 +119,9 @@ export function MemoryForm({
           />
         </div>
 
-        <div className="form-grid">
-          <div className="field">
-            <label className="label">{pt ? "Categoria" : "Category"}</label>
-            <select className="input" value={form.category} onChange={(e) => set("category", e.target.value)}>
-              {CATS.map((c) => (
-                <option key={c.v} value={c.v}>
-                  {c.icon} {pt ? c.pt : c.en}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label className="label">{pt ? "Data (opcional)" : "Date (optional)"}</label>
-            <input type="date" className="input" value={form.memory_date} onChange={(e) => set("memory_date", e.target.value)} />
-          </div>
+        <div className="field">
+          <label className="label">{pt ? "Data (opcional)" : "Date (optional)"}</label>
+          <input type="date" className="input" value={form.memory_date} onChange={(e) => set("memory_date", e.target.value)} />
         </div>
 
         <div className="field">

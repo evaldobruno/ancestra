@@ -17,13 +17,6 @@ import {
   type MemoryPost,
 } from "@/lib/memories";
 
-const CATS: Record<string, { pt: string; en: string; icon: string }> = {
-  traditions: { pt: "Tradições", en: "Traditions", icon: "🕯️" },
-  recipes: { pt: "Receitas", en: "Recipes", icon: "🍰" },
-  travel: { pt: "Viagens", en: "Travel", icon: "✈️" },
-  childhood: { pt: "Infância", en: "Childhood", icon: "🧸" },
-};
-
 const fmt = (s?: string | null, locale = "pt") => {
   if (!s) return "";
   const [y, m, d] = s.slice(0, 10).split("-").map(Number);
@@ -37,7 +30,6 @@ export default function Memories() {
   const [memories, setMemories] = useState<MemoryRow[]>([]);
   const [source, setSource] = useState<"supabase" | "demo">("demo");
   const [loading, setLoading] = useState(true);
-  const [cat, setCat] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [viewer, setViewer] = useState<Viewer>({ userId: null, isSuper: false });
 
@@ -114,7 +106,7 @@ export default function Memories() {
     load();
   }
 
-  const list = cat ? memories.filter((m) => m.category === cat) : memories;
+  const list = memories;
 
   // ── Detail view ──
   if (current) {
@@ -128,8 +120,7 @@ export default function Memories() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-xs text-stone-400">
-                {CATS[current.category]?.icon} {fmt(current.date, locale)}
-                {current.location ? ` · ${current.location}` : ""}
+                {fmt(current.date, locale)}{current.location ? ` · ${current.location}` : ""}
               </div>
               <h1 className="mt-1 text-2xl font-bold">{current.title}</h1>
             </div>
@@ -216,19 +207,6 @@ export default function Memories() {
 
       <MemoryForm open={formOpen} onClose={() => setFormOpen(false)} onSaved={load} />
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        <button onClick={() => setCat(null)}
-          className={`rounded-full px-3 py-1 text-sm ${!cat ? "bg-brand-500 text-white" : "bg-brand-50 dark:bg-brand-900"}`}>
-          {pt ? "Todas" : "All"}
-        </button>
-        {Object.entries(CATS).map(([k, v]) => (
-          <button key={k} onClick={() => setCat(k)}
-            className={`rounded-full px-3 py-1 text-sm ${cat === k ? "bg-brand-500 text-white" : "bg-brand-50 dark:bg-brand-900"}`}>
-            {v.icon} {pt ? v.pt : v.en}
-          </button>
-        ))}
-      </div>
-
       {loading ? (
         <p className="text-stone-400">{t("common.loading")}</p>
       ) : list.length === 0 ? (
@@ -262,9 +240,7 @@ export default function Memories() {
                 ) : (
                   <div className="mb-2 h-32 rounded-xl bg-gradient-to-br from-brand-200 to-gold-200 dark:from-brand-800 dark:to-brand-900" />
                 )}
-                <div className="text-xs text-stone-400">
-                  {CATS[m.category]?.icon} {fmt(m.date, locale)}
-                </div>
+                {m.date && <div className="text-xs text-stone-400">{fmt(m.date, locale)}</div>}
                 <h3 className="mt-1 font-semibold">{m.title}</h3>
                 <p className="mt-1 line-clamp-2 text-sm text-stone-500">{m.excerpt}</p>
                 <p className="mt-2 text-xs font-medium text-brand-500">{pt ? "Abrir →" : "Open →"}</p>
